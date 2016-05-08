@@ -96,8 +96,8 @@ def traceroute():
 def bird():
     check_accesslist()
 
-    if request.path == "/bird": b = BirdSocket(file="/var/run/bird.ctl")
-    elif request.path == "/bird6": b = BirdSocket(file="/var/run/bird6.ctl")
+    if request.path == "/bird": b = BirdSocket(file="/var/run/bird/bird.ctl")
+    elif request.path == "/bird6": b = BirdSocket(file="/var/run/bird/bird6.ctl")
     else: return "No bird socket selected"
 
     query = request.args.get("q","")
