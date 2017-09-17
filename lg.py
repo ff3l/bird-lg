@@ -20,6 +20,7 @@
 #
 ###
 
+import base64
 from datetime import datetime
 import memcache
 import subprocess
@@ -222,7 +223,7 @@ def whois():
 
 
 SUMMARY_UNWANTED_PROTOS = ["Kernel", "Static", "Device"]
-SUMMARY_RE_MATCH = r"(?P<name>[\w_]+)\s+(?P<proto>\w+)\s+(?P<table>\w+)\s+(?P<state>\w+)\s+(?P<since>((|\d\d\d\d-\d\d-\d\d\s)|(|\d\d:)\d\d:\d\d|\w\w\w\d\d))($|\s+(?P<info>.*))"
+SUMMARY_RE_MATCH = r"(?P<name>[\w_]+)\s+(?P<proto>\w+)\s+(?P<table>\w+)\s+(?P<state>\w+)\s+(?P<since>((\d\d\d\d-\d\d-\d\d\s)|(\d\d:)\d\d:\d\d|\w\w\w\d\d))($|\s+(?P<info>.*))"
 
 
 @app.route("/summary/<hosts>")
@@ -401,6 +402,7 @@ def show_bgpmap():
     if not data:
         abort(400)
 
+    data = base64.b64decode(data)
     data = json.loads(data)
 
     graph = pydot.Dot('BGPMAP', graph_type='digraph')
@@ -506,8 +508,14 @@ def show_bgpmap():
     for _as in prepend_as:
         graph.add_edge(pydot.Edge(*(_as, _as), label=" %dx" % prepend_as[_as], color="grey", fontcolor="grey"))
 
+    fmt = request.args.get('fmt', 'png')
     #response = Response("<pre>" + graph.create_dot() + "</pre>")
-    response = Response(graph.create_png(), mimetype='image/png')
+    if fmt == "png":
+        response = Response(graph.create_png(), mimetype='image/png')
+    elif fmt == "svg":
+        response = Response(graph.create_svg(), mimetype='image/svg+xml')
+    else:
+        abort(400, "Incorrect format")
     response.headers['Last-Modified'] = datetime.now()
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
     response.headers['Pragma'] = 'no-cache'
@@ -635,7 +643,7 @@ def show_route(request_type, hosts, proto):
             detail[host] = add_links(res)
 
     if bgpmap:
-        detail = json.dumps(detail)
+        detail = base64.b64encode(json.dumps(detail))
 
     return render_template((bgpmap and 'bgpmap.html' or 'route.html'), detail=detail, command=command, expression=expression, errors=errors)
 
